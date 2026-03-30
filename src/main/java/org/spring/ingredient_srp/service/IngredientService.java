@@ -1,37 +1,54 @@
 package org.spring.ingredient_srp.service;
 
 import org.spring.ingredient_srp.model.Ingredient;
+import org.spring.ingredient_srp.model.StockValue;
+import org.spring.ingredient_srp.model.Unit;
 import org.spring.ingredient_srp.repository.IngredientRepository;
-import java.sql.Connection;
+import org.springframework.stereotype.Service;
+
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
-import org.spring.ingredient_srp.config.DBConnection;
 
+@Service
 public class IngredientService {
-    private final IngredientRepository ingredientRepository = new IngredientRepository();
+    private final IngredientRepository ingredientRepository;
 
-    public List<Ingredient> getIngredients(int page, int size) throws SQLException {
-        return ingredientRepository.findIngredients(page, size);
+    public IngredientService(IngredientRepository ingredientRepository) {
+        this.ingredientRepository = ingredientRepository;
     }
 
-    public void createIngredients(List<Ingredient> ingredients) {
-        try (Connection conn = DBConnection.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                for (Ingredient ing : ingredients) {
-                    ingredientRepository.save(ing, conn);
-                }
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw new RuntimeException("Échec atomique : Opération annulée.", e);
-            }
+    public List<Ingredient> findAll() {
+        try {
+            return ingredientRepository.findAll();
         } catch (SQLException e) {
-            throw new RuntimeException("Erreur de connexion", e);
+            throw new RuntimeException("Erreur lors de la récupération des ingrédients", e);
         }
     }
 
-    public List<Ingredient> findByCriteria(String name, String cat, String dishName, int page, int size) throws SQLException {
-        return ingredientRepository.findByCriteria(name, cat, dishName, page, size);
+    public Ingredient getIngredientById(Integer id) {
+        try {
+            Ingredient ingredient = ingredientRepository.findById(id);
+            if (ingredient == null) {
+                throw new RuntimeException("Ingredient.id=" + id + " is not found");
+            }
+            return ingredient;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public StockValue getStockValue(Integer id, String atStr, String unitStr) {
+        getIngredientById(id);
+        Instant at = Instant.parse(atStr);
+
+        try {
+            Double quantity = ingredientRepository.getStockQuantityAt(id, at);
+            Unit unit = Unit.valueOf(unitStr.toUpperCase());
+
+            return new StockValue(quantity, unit, at);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

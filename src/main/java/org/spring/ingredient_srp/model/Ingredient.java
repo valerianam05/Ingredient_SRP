@@ -1,27 +1,23 @@
 package org.spring.ingredient_srp.model;
 
 public class Ingredient {
-    // On utilise les Wrappers (Majuscules) partout pour autoriser le null
     private Integer id;
     private String name;
     private Double price;
-    private String category;
     private Integer idDish;
+    private CategoryEnum category;
 
-    // Constructeur par défaut (Indispensable pour Jackson/Spring)
     public Ingredient() {
     }
 
-    // Constructeur complet : ATTENTION aux types ici (Integer et Double)
-    public Ingredient(Integer id, String name, Double price, String category, Integer idDish) {
+    public Ingredient(Integer id, String name, Double price, Integer idDish, CategoryEnum category) {
         this.id = id;
         this.name = name;
         this.price = price;
-        this.category = category;
         this.idDish = idDish;
+        this.category = category;
     }
 
-    // Getters et Setters mis à jour
     public Integer getId() {
         return id;
     }
@@ -46,14 +42,6 @@ public class Ingredient {
         this.price = price;
     }
 
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
     public Integer getIdDish() {
         return idDish;
     }
@@ -61,4 +49,13 @@ public class Ingredient {
     public void setIdDish(Integer idDish) {
         this.idDish = idDish;
     }
+
+    public CategoryEnum getCategory() {
+        return category;
+    }
+
+    public void setCategory(CategoryEnum category) {
+        this.category = category;
+    }
 }
+

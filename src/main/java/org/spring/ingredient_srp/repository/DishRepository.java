@@ -1,15 +1,25 @@
 package org.spring.ingredient_srp.repository;
 
-import org.spring.ingredient_srp.config.DBConnection;
+import org.spring.ingredient_srp.model.CategoryEnum;
 import org.spring.ingredient_srp.model.Dish;
 import org.spring.ingredient_srp.model.Ingredient;
+import org.springframework.stereotype.Repository;
+
+import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+
+@Repository
 public class DishRepository {
 
-    // a) Récupérer un plat ET ses ingrédients (Jointure)
+    private final DataSource dataSource;
+
+    public DishRepository(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
     public Dish findDishById(Integer id) throws SQLException {
         String sql = """
             SELECT d.id, d.name as dish_name, d.dish_type, 
@@ -19,7 +29,7 @@ public class DishRepository {
             WHERE d.id = ?
         """;
         Dish dish = null;
-        try (Connection conn = DBConnection.getConnection();
+        try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -32,9 +42,17 @@ public class DishRepository {
                         dish.setIngredients(new ArrayList<>());
                     }
                     if (rs.getInt("ing_id") != 0) {
-                        dish.getIngredients().add(new Ingredient(
-                                rs.getInt("ing_id"), rs.getString("ing_name"),
-                                rs.getDouble("price"), rs.getString("category"), id));
+                        Ingredient ing = new Ingredient();
+                        ing.setId(rs.getInt("ing_id"));
+                        ing.setName(rs.getString("ing_name"));
+                        ing.setPrice(rs.getDouble("price"));
+
+                        String catStr = rs.getString("category");
+                        if (catStr != null) {
+                            ing.setCategory(CategoryEnum.valueOf(catStr.trim()));
+                        }
+
+                        dish.getIngredients().add(ing);
                     }
                 }
             }
@@ -42,7 +60,6 @@ public class DishRepository {
         return dish;
     }
 
-    // d) Upsert du plat
     public void upsert(Dish dish, Connection conn) throws SQLException {
         String sql = "INSERT INTO dish (id, name, dish_type) VALUES (?, ?, ?::dish_type) " +
                 "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, dish_type = EXCLUDED.dish_type";
@@ -74,13 +91,11 @@ public class DishRepository {
         }
     }
 
-
-    // e) Recherche de plats par nom d'ingrédient
     public List<Dish> findByIngredientName(String ingName) throws SQLException {
         String sql = "SELECT DISTINCT d.id, d.name, d.dish_type FROM dish d " +
                 "JOIN ingredient i ON d.id = i.id_dish WHERE i.name ILIKE ?";
         List<Dish> list = new ArrayList<>();
-        try (Connection conn = DBConnection.getConnection();
+        try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, "%" + ingName + "%");
             try (ResultSet rs = ps.executeQuery()) {
@@ -94,5 +109,33 @@ public class DishRepository {
             }
         }
         return list;
+    }
+
+    public void updateDishIngredients(int dishId, List<Ingredient> ingredients) throws SQLException {
+        String detachSql = "UPDATE ingredient SET id_dish = NULL WHERE id_dish = ?";
+        String attachSql = "UPDATE ingredient SET id_dish = ? WHERE id = ?";
+
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false); // Transaction pour éviter les erreurs partielles
+            try {
+                // Détacher les anciens
+                try (PreparedStatement ps1 = conn.prepareStatement(detachSql)) {
+                    ps1.setInt(1, dishId);
+                    ps1.executeUpdate();
+                }
+                // Attacher les nouveaux fournis dans le JSON
+                try (PreparedStatement ps2 = conn.prepareStatement(attachSql)) {
+                    for (Ingredient ing : ingredients) {
+                        ps2.setInt(1, dishId);
+                        ps2.setInt(2, ing.getId());
+                        ps2.executeUpdate();
+                    }
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
     }
 }

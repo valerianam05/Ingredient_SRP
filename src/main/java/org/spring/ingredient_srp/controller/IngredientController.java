@@ -3,42 +3,51 @@ package org.spring.ingredient_srp.controller;
 import org.spring.ingredient_srp.model.Ingredient;
 import org.spring.ingredient_srp.service.IngredientService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/ingredients")
 public class IngredientController {
-    private final IngredientService ingredientService = new IngredientService();
+    private final IngredientService ingredientService;
+
+    public IngredientController(IngredientService ingredientService) {
+        this.ingredientService = ingredientService;
+    }
 
     @GetMapping
-    public List<Ingredient> getIngredients(@RequestParam int page, @RequestParam int size) {
+    public ResponseEntity<List<Ingredient>> getAll() {
+        return ResponseEntity.ok(ingredientService.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getById(@PathVariable Integer id) {
         try {
-            return ingredientService.getIngredients(page, size);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur lors de la récupération");
+            return ResponseEntity.ok(ingredientService.getIngredientById(id));
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
-    @PostMapping("/batch")
-    @ResponseStatus(HttpStatus.CREATED)
-    public void createIngredients(@RequestBody List<Ingredient> ingredients) {
-        ingredientService.createIngredients(ingredients);
-    }
+    @GetMapping("/{id}/stock")
+    public ResponseEntity<?> getStock(
+            @PathVariable Integer id,
+            @RequestParam(required = false) String at,
+            @RequestParam(required = false) String unit) {
 
-    @GetMapping("/search")
-    public List<Ingredient> search(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String dishName,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+        if (at == null || unit == null) {
+            return new ResponseEntity<>(
+                    "Either mandatory query parameter 'at' or 'unit' is not provided.",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
         try {
-            return ingredientService.findByCriteria(name, category, dishName, page, size);
+            return ResponseEntity.ok(ingredientService.getStockValue(id, at, unit));
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 }

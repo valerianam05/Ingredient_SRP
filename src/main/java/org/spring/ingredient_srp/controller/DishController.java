@@ -1,42 +1,69 @@
 package org.spring.ingredient_srp.controller;
 
 import org.spring.ingredient_srp.model.Dish;
+import org.spring.ingredient_srp.model.Ingredient;
 import org.spring.ingredient_srp.service.DishService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.sql.SQLException;
 import java.util.List;
 
 @RestController
 @RequestMapping("/dishes")
 public class DishController {
-    private final DishService dishService = new DishService();
+
+    private final DishService dishService;
+
+    public DishController(DishService dishService) {
+        this.dishService = dishService;
+    }
 
     @GetMapping("/{id}")
     public Dish getDishById(@PathVariable Integer id) {
+        Dish dish = dishService.getDishById(id);
+        if (dish == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Plat non trouvé");
+        }
+        return dish;
+    }
+
+    @PostMapping
+    public ResponseEntity<Dish> saveDish(@RequestBody Dish dish) {
         try {
-            Dish dish = dishService.getDishById(id);
-            if (dish == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Plat non trouvé");
-            }
-            return dish;
+            Dish savedDish = dishService.saveDish(dish);
+            return new ResponseEntity<>(savedDish, HttpStatus.CREATED);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-    @PostMapping
-    public Dish saveDish(@RequestBody Dish dish) {
-        return dishService.saveDish(dish);
+    @GetMapping("/search")
+    public List<Dish> getByIngredient(@RequestParam String ingredientName) {
+        return dishService.getDishesByIngredient(ingredientName);
     }
 
-    @GetMapping("/search-by-ingredient")
-    public List<Dish> getByIngredient(@RequestParam String name) {
+    @PutMapping("/{id}/ingredients")
+    public ResponseEntity<?> updateDishIngredients(
+            @PathVariable int id,
+            @RequestBody List<Ingredient> ingredients) {
+
+        if (ingredients == null) {
+            return ResponseEntity.status(400).body("Le corps de la requête est obligatoire.");
+        }
+
         try {
-            return dishService.getDishesByIngredient(name);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            dishService.updateIngredients(id, ingredients);
+            return ResponseEntity.ok("Association mise à jour.");
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not found")) {
+                return ResponseEntity.status(404).body("Dish.id=" + id + " is not found");
+            }
+            return ResponseEntity.status(500).body(e.getMessage());
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 }
