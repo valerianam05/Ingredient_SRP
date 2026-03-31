@@ -61,10 +61,16 @@ public class DishRepository {
     }
 
     public void upsert(Dish dish, Connection conn) throws SQLException {
-        String sql = "INSERT INTO dish (id, name, dish_type) VALUES (?, ?, ?::dish_type) " +
+        String sql = "INSERT INTO dish (id, name, dish_type) VALUES (COALESCE(?, nextval('dish_id_seq')), ?, ?::dish_type) " +
                 "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, dish_type = EXCLUDED.dish_type";
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, dish.getId());
+            if (dish.getId() == null) {
+                ps.setNull(1, Types.INTEGER);
+            } else {
+                ps.setInt(1, dish.getId());
+            }
+
             ps.setString(2, dish.getName());
             ps.setString(3, dish.getDishType());
             ps.executeUpdate();
@@ -138,4 +144,44 @@ public class DishRepository {
             }
         }
     }
+
+    public List<Dish> findFiltered(Double pMax, Double pMin, String n, Connection conn) throws SQLException {
+        String sql = "SELECT id, name, dish_type, price FROM dish WHERE 1=1";
+
+        if (pMax != null) { sql += " AND price < ?"; }
+        if (pMin != null) { sql += " AND price > ?"; }
+        if (n != null)    { sql += " AND name ILIKE ?"; }
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            int index = 1;
+
+            if (pMax != null) { pstmt.setDouble(index++, pMax); }
+            if (pMin != null) { pstmt.setDouble(index++, pMin); }
+            if (n != null)    { pstmt.setString(index++, "%" + n + "%"); }
+
+            List<Dish> results = new ArrayList<>();
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    results.add(new Dish(rs.getInt("id"), rs.getString("name"), rs.getDouble("price")));
+                }
+            }
+            return results;
+        }
+
+    }
+    public boolean existsByName(String name, Connection conn) throws SQLException {
+        String sql = "SELECT COUNT(id) FROM dish WHERE name = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
 }

@@ -20,7 +20,7 @@ public class IngredientRepository {
 
     public List<Ingredient> findAll() throws SQLException {
         List<Ingredient> ingredients = new ArrayList<>();
-        String sql = "SELECT id, name, price, category FROM ingredient";
+        String sql = "SELECT id, name, price, category,id_dish FROM ingredient";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -32,8 +32,13 @@ public class IngredientRepository {
                 ing.setName(rs.getString("name"));
                 ing.setPrice(rs.getDouble("price"));
                 String catStr = rs.getString("category");
+                int idDish = rs.getInt("id_dish");
                 if (catStr != null) {
                     ing.setCategory(CategoryEnum.valueOf(catStr.trim()));
+                }
+
+                if (!rs.wasNull()) { // Vérifie si la valeur n'est pas NULL en SQL
+                    ing.setIdDish(idDish);
                 }
                 ingredients.add(ing);
             }

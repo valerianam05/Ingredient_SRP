@@ -3,24 +3,32 @@ package org.spring.ingredient_srp.model;
 import java.util.List;
 
 public class Dish {
-    private int id;
+    private Integer id;
     private String name;
     private String dishType;
+    private Double price;
     private List<Ingredient> ingredients;
 
-
-    public Dish() {
+    public Dish(Integer id, String name, String dishType, List<Ingredient> ingredients) {
         this.id = id;
         this.name = name;
         this.dishType = dishType;
         this.ingredients = ingredients;
     }
 
-    public int getId() {
+
+    public Dish(int id, String name, double price) {
+    }
+
+    public Dish() {
+
+    }
+
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -47,6 +55,11 @@ public class Dish {
     public void setIngredients(List<Ingredient> ingredients) {
         this.ingredients = ingredients;
     }
+    public Double getPrice() {
+        return price;
+    }
 
-
+    public void setPrice(Double price) {
+        this.price = price;
+    }
 }

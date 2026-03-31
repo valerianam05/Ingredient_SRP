@@ -11,12 +11,10 @@ public class DataSourceConfig {
     @Bean
     public DataSource dataSource() {
         DriverManagerDataSource ds = new DriverManagerDataSource();
-
         ds.setDriverClassName("org.postgresql.Driver");
         ds.setUrl("jdbc:postgresql://localhost:5432/ingredient_TD5");
         ds.setUsername("ingredient_TD5_manager");
         ds.setPassword("123456");
-
         return ds;
     }
 }
