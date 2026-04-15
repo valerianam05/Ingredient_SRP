@@ -1,8 +1,7 @@
 package org.spring.ingredient_srp.service;
 
+import org.spring.ingredient_srp.model.Dish;
 import org.spring.ingredient_srp.model.Ingredient;
-import org.spring.ingredient_srp.model.StockValue;
-import org.spring.ingredient_srp.model.Unit;
 import org.spring.ingredient_srp.repository.IngredientRepository;
 import org.springframework.stereotype.Service;
 
@@ -18,37 +17,29 @@ public class IngredientService {
         this.ingredientRepository = ingredientRepository;
     }
 
-    public List<Ingredient> findAll() {
-        try {
-            return ingredientRepository.findAll();
-        } catch (SQLException e) {
-            throw new RuntimeException("Erreur lors de la récupération des ingrédients", e);
-        }
+
+
+    public List<Dish> getAllDishes() throws SQLException {
+        return ingredientRepository.findAllDishes();
     }
 
-    public Ingredient getIngredientById(Integer id) {
-        try {
-            Ingredient ingredient = ingredientRepository.findById(id);
-            if (ingredient == null) {
-                throw new RuntimeException("Ingredient.id=" + id + " is not found");
-            }
-            return ingredient;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+    public List<Ingredient> getAllIngredients() throws SQLException {
+        return ingredientRepository.findAllIngredients();
     }
 
-    public StockValue getStockValue(Integer id, String atStr, String unitStr) {
-        getIngredientById(id);
-        Instant at = Instant.parse(atStr);
+    public Ingredient getIngredientById(Integer id) throws SQLException {
+        return ingredientRepository.findById(id);
+    }
 
-        try {
-            Double quantity = ingredientRepository.getStockQuantityAt(id, at);
-            Unit unit = Unit.valueOf(unitStr.toUpperCase());
+    public Object getStockValue(Integer id, String at, String unit) throws SQLException {
+        Instant instantAt = Instant.parse(at);
 
-            return new StockValue(quantity, unit, at);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        Double quantity = ingredientRepository.getStockQuantityAt(id, instantAt);
+
+        return new Object() {
+            public final Double valeur = quantity;
+            public final String unite = unit;
+            public final String date = at;
+        };
     }
 }

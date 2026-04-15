@@ -4,6 +4,7 @@ import org.spring.ingredient_srp.exception.BadRequestException;
 import org.spring.ingredient_srp.model.Dish;
 import org.spring.ingredient_srp.model.Ingredient;
 import org.spring.ingredient_srp.repository.DishRepository;
+import org.spring.ingredient_srp.repository.IngredientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +20,20 @@ public class DishService {
 
     private final DishRepository dishRepository;
     private final DataSource dataSource;
+    private IngredientRepository ingredientRepository;
 
     public DishService(DishRepository dishRepository, DataSource dataSource) {
         this.dishRepository = dishRepository;
         this.dataSource = dataSource;
+    }
+    public Dish updateComplete(int id, Dish dish) throws SQLException {
+        dish.setId(id);
+
+        dishRepository.update(dish);
+
+        ingredientRepository.updateDishIngredients(id, dish.getIngredients());
+
+        return dish;
     }
 
     public Dish getDishById(Integer id) {
@@ -60,19 +71,6 @@ public class DishService {
             return dishRepository.findByIngredientName(ingredientName);
         } catch (SQLException e) {
             throw new RuntimeException("Erreur lors de la recherche par ingrédient", e);
-        }
-    }
-
-    public void updateIngredients(int id, List<Ingredient> ingredients) throws SQLException {
-        Dish dish = dishRepository.findDishById(id);
-        if (dish == null) {
-            throw new RuntimeException("Dish.id=" + id + " is not found");
-        }
-
-        try {
-            dishRepository.updateDishIngredients(id, ingredients);
-        } catch (SQLException e) {
-            throw new RuntimeException("Erreur SQL : " + e.getMessage());
         }
     }
 

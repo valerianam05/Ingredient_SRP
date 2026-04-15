@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.SQLException;
 import java.util.List;
 
 @RestController
@@ -18,8 +19,8 @@ public class IngredientController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Ingredient>> getAll() {
-        return ResponseEntity.ok(ingredientService.findAll());
+    public ResponseEntity<List<Ingredient>> getAll() throws SQLException {
+        return ResponseEntity.ok(ingredientService.getAllIngredients());
     }
 
     @GetMapping("/{id}")
@@ -28,6 +29,8 @@ public class IngredientController {
             return ResponseEntity.ok(ingredientService.getIngredientById(id));
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 

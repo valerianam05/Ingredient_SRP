@@ -1,12 +1,13 @@
 package org.spring.ingredient_srp.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Ingredient {
     private Integer id;
     private String name;
     private Double price;
     private Integer idDish;
     private CategoryEnum category;
-
     public Ingredient() {
     }
 

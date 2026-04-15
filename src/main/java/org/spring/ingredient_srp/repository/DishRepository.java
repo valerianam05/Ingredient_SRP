@@ -20,13 +20,36 @@ public class DishRepository {
         this.dataSource = dataSource;
     }
 
+    public List<Dish> findAll() {
+        List<Dish> dishes = new ArrayList<>();
+
+        String sql = "SELECT id, name, dish_type, price FROM dish";
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Dish dish = new Dish();
+                dish.setId(rs.getInt("id"));
+                dish.setName(rs.getString("name"));
+                dish.setDishType(rs.getString("dish_type"));
+
+                dish.setPrice(rs.getDouble("price"));
+
+                dish.setIngredients((List<Ingredient>) this.findDishById(dish.getId()));
+
+                dishes.add(dish);
+            }
+            return dishes;
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors du findAll : " + e.getMessage());
+        }
+    }
+
     public Dish findDishById(Integer id) throws SQLException {
         String sql = """
-            SELECT d.id, d.name as dish_name, d.dish_type, 
-                   i.id as ing_id, i.name as ing_name, i.price, i.category
-            FROM dish d
-            LEFT JOIN ingredient i ON d.id = i.id_dish
-            WHERE d.id = ?
+        String sql = "SELECT id, name, price, category FROM ingredient WHERE id_dish = ?";
         """;
         Dish dish = null;
         try (Connection conn = dataSource.getConnection();
@@ -36,7 +59,7 @@ public class DishRepository {
                 while (rs.next()) {
                     if (dish == null) {
                         dish = new Dish();
-                        dish.setId(rs.getInt("id"));
+                        dish.setId(rs.getInt("id_dish"));
                         dish.setName(rs.getString("dish_name"));
                         dish.setDishType(rs.getString("dish_type"));
                         dish.setIngredients(new ArrayList<>());
@@ -117,31 +140,18 @@ public class DishRepository {
         return list;
     }
 
-    public void updateDishIngredients(int dishId, List<Ingredient> ingredients) throws SQLException {
-        String detachSql = "UPDATE ingredient SET id_dish = NULL WHERE id_dish = ?";
-        String attachSql = "UPDATE ingredient SET id_dish = ? WHERE id = ?";
+    public void update(Dish dish) throws SQLException {
+        String sql = "UPDATE dish SET name = ?, dish_type = ?, price = ? WHERE id = ?";
 
-        try (Connection conn = dataSource.getConnection()) {
-            conn.setAutoCommit(false); // Transaction pour éviter les erreurs partielles
-            try {
-                // Détacher les anciens
-                try (PreparedStatement ps1 = conn.prepareStatement(detachSql)) {
-                    ps1.setInt(1, dishId);
-                    ps1.executeUpdate();
-                }
-                // Attacher les nouveaux fournis dans le JSON
-                try (PreparedStatement ps2 = conn.prepareStatement(attachSql)) {
-                    for (Ingredient ing : ingredients) {
-                        ps2.setInt(1, dishId);
-                        ps2.setInt(2, ing.getId());
-                        ps2.executeUpdate();
-                    }
-                }
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            }
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, dish.getName());
+            ps.setString(2, dish.getDishType().toString());
+            ps.setDouble(3, dish.getPrice());
+            ps.setInt(4, dish.getId());
+
+            ps.executeUpdate();
         }
     }
 
@@ -169,6 +179,7 @@ public class DishRepository {
         }
 
     }
+
     public boolean existsByName(String name, Connection conn) throws SQLException {
         String sql = "SELECT COUNT(id) FROM dish WHERE name = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {

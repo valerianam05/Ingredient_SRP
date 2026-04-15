@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: API de Gestion des Ingrédients et Plats
+  description: Spécification OAS3 pour la gestion de restaurant (TD Spring Boot)
+  version: 1.0.0
+
+paths:
+  /ingredients:
+    get:
+      summary: Retourne la liste des ingrédients
+      responses:
+        '200':
+          description: Liste des ingrédients récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ingredient'
+
+  /ingredients/{id}:
+    get:
+      summary: Retourne un ingrédient par son identifiant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Objet JSON relatif à l’ingrédient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+        '404':
+          description: Ingredient.id={id} is not found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Ingredient.id={id} is not found"
+
+  /ingredients/{id}/stock:
+    get:
+      summary: Retourne la valeur de stock d'un ingrédient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: at
+          in: query
+          required: true
+          description: Moment voulu pour récupérer la valeur du stock
+          schema:
+            type: string
+            format: date-time
+        - name: unit
+          in: query
+          required: true
+          description: Unité de mesure (PCS, KG, L)
+          schema:
+            type: string
+            enum: [PCS, KG, L]
+      responses:
+        '200':
+          description: Valeur du stock récupérée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unit:
+                    type: string
+                  value:
+                    type: number
+        '400':
+          description: Paramètre obligatoire manquant
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Either mandatory query parameter `at` or `unit` is not provided."
+        '404':
+          description: Ingredient.id={id} is not found
+
+  /dishes:
+    get:
+      summary: Retourne la liste des plats
+      responses:
+        '200':
+          description: Liste des plats avec leurs ingrédients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dish'
+
+  /dishes/{id}/ingredients:
+    put:
+      summary: Modifier la liste des ingrédients associés à un plat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        description: Liste des ingrédients à associer ou dissocier
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Ingredient'
+      responses:
+        '200':
+          description: Mise à jour réussie
+        '400':
+          description: Corps de requête obligatoire manquant
+        '404':
+          description: Dish.id={id} is not found
+
+components:
+  schemas:
+    Ingredient:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/Category'
+        price:
+          type: number
+
+    Dish:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        unit_price:
+          type: number
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingredient'
+
+    Category:
+      type: string
+      enum: [VEGETABLE, ANIMAL, MARINE, DAIRY, OTHER]

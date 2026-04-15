@@ -1,0 +1,208 @@
+openapi: 3.0.3
+info:
+  description: Spécification OAS3 pour la gestion de restaurant (TD Spring Boot)
+  title: API de Gestion des Ingrédients et Plats
+  version: 1.0.0
+servers:
+- url: /
+paths:
+  /ingredients:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Ingredient'
+                type: array
+          description: Liste des ingrédients récupérée avec succès
+      summary: Retourne la liste des ingrédients
+      x-accepts:
+      - application/json
+  /ingredients/{id}:
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+          description: Objet JSON relatif à l’ingrédient
+        "404":
+          content:
+            text/plain:
+              schema:
+                example: "Ingredient.id={id} is not found"
+                type: string
+          description: "Ingredient.id={id} is not found"
+      summary: Retourne un ingrédient par son identifiant
+      x-accepts:
+      - application/json
+      - text/plain
+  /ingredients/{id}/stock:
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+        style: simple
+      - description: Moment voulu pour récupérer la valeur du stock
+        explode: true
+        in: query
+        name: at
+        required: true
+        schema:
+          format: date-time
+          type: string
+        style: form
+      - description: "Unité de mesure (PCS, KG, L)"
+        explode: true
+        in: query
+        name: unit
+        required: true
+        schema:
+          enum:
+          - PCS
+          - KG
+          - L
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_ingredients__id__stock_get_200_response'
+          description: Valeur du stock récupérée
+        "400":
+          content:
+            text/plain:
+              schema:
+                example: Either mandatory query parameter `at` or `unit` is not provided.
+                type: string
+          description: Paramètre obligatoire manquant
+        "404":
+          description: "Ingredient.id={id} is not found"
+      summary: Retourne la valeur de stock d'un ingrédient
+      x-accepts:
+      - application/json
+      - text/plain
+  /dishes:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Dish'
+                type: array
+          description: Liste des plats avec leurs ingrédients
+      summary: Retourne la liste des plats
+      x-accepts:
+      - application/json
+  /dishes/{id}/ingredients:
+    put:
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              items:
+                $ref: '#/components/schemas/Ingredient'
+              type: array
+        description: Liste des ingrédients à associer ou dissocier
+        required: true
+      responses:
+        "200":
+          description: Mise à jour réussie
+        "400":
+          description: Corps de requête obligatoire manquant
+        "404":
+          description: "Dish.id={id} is not found"
+      summary: Modifier la liste des ingrédients associés à un plat
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+components:
+  schemas:
+    Ingredient:
+      example:
+        price: 6.027456183070403
+        name: name
+        id: 0
+        category: VEGETABLE
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/Category'
+        price:
+          type: number
+      type: object
+    Dish:
+      example:
+        name: name
+        ingredients:
+        - price: 6.027456183070403
+          name: name
+          id: 0
+          category: VEGETABLE
+        - price: 6.027456183070403
+          name: name
+          id: 0
+          category: VEGETABLE
+        id: 0
+        unit_price: 6.027456183070403
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        unit_price:
+          type: number
+        ingredients:
+          items:
+            $ref: '#/components/schemas/Ingredient'
+          type: array
+      type: object
+    Category:
+      enum:
+      - VEGETABLE
+      - ANIMAL
+      - MARINE
+      - DAIRY
+      - OTHER
+      type: string
+    _ingredients__id__stock_get_200_response:
+      example:
+        unit: unit
+        value: 0.8008281904610115
+      properties:
+        unit:
+          type: string
+        value:
+          type: number
+      type: object
+
